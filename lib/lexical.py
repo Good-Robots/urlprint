@@ -22,6 +22,11 @@ class LexicalFeatures(URL):
             return head(_url, allow_redirects=True, timeout=1).url
         except:
             return self.url
+        
+    @computed_field
+    @cached_property
+    def lx_label(self) -> str:
+        return self.label.value
 
     @computed_field
     @cached_property
