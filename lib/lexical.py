@@ -2,10 +2,12 @@ from math import log
 from requests import head
 from string import punctuation
 
-from base import URL, computed_field, cached_property, Optional
-
+from base import URL, computed_field, cached_property
 
 class LexicalFeatures(URL):
+    def __init__(self, url:str, label:str) -> None:
+        super().__init__(url=url, label=label)
+
     vowels: str = "aeiou"
     consonants: str = "bcdfghjklmnpqrstvwxyz"
     punctuations: str = punctuation
@@ -13,32 +15,12 @@ class LexicalFeatures(URL):
     @computed_field
     @cached_property
     def lx_url_string(self) -> str:
-        """String representation of the URL."""
-        _url = self.url
-        if not self.cp_scheme:
-            _url = f"http://{self.url}"
+        return self.resolved
 
-        try:
-            return head(_url, allow_redirects=True, timeout=1).url
-        except:
-            return self.url
-        
     @computed_field
     @cached_property
     def lx_label(self) -> str:
         return self.label.value
-
-    @computed_field
-    @cached_property
-    def lx_host(self) -> str:
-        """Hostname of the URL."""
-        return self.cp_host
-    
-    @computed_field
-    @cached_property
-    def lx_path(self) -> Optional[str]:
-        """Path of the URL."""
-        return self.cp_path
 
     @computed_field
     @cached_property
@@ -62,7 +44,7 @@ class LexicalFeatures(URL):
     @cached_property
     def lx_has_tls(self) -> bool:
         """Check if URL uses HTTPS."""
-        return self.url.startswith("https")
+        return self.lx_url_string.startswith("https")
     
     @computed_field
     @cached_property
@@ -78,6 +60,12 @@ class LexicalFeatures(URL):
     
     @computed_field
     @cached_property
+    def lx_len_tld(self) -> int:
+        """Length of the TLD."""
+        return len(self.lx_tld)
+    
+    @computed_field
+    @cached_property
     def lx_number_of_hyphens(self) -> int:
         """Number of Hyphens in the URL."""
         return self.lx_url_string.count("-")
@@ -87,6 +75,35 @@ class LexicalFeatures(URL):
     def lx_number_of_parameters(self) -> int:
         """Number of Parameters in the URL."""
         return len(self.cp_query_params)
+    
+    @computed_field
+    @cached_property
+    def avg_len_query_params(self) -> float:
+        """Average Length of the Query Parameters."""
+        if len(self.cp_query_params) == 0:
+            return 0
+        
+        if len(self.cp_query_params) == 1:
+            return len(self.cp_query_params[0][1])
+        
+        total = sum([
+            len(param[1]) for param in self.cp_query_params
+        ])
+        return total / len(self.cp_query_params)
+
+
+    @computed_field
+    @cached_property
+    def number_of_int_query_params(self) -> int:
+        """Number of Integer Query Parameters."""
+        if len(self.cp_query_params) == 0:
+            return 0
+        
+        total = sum([
+            all(c.replace('.','').isdigit() for c in param[1]) 
+                for param in self.cp_query_params
+            ])
+        return total
     
     @computed_field
     @cached_property
@@ -122,7 +139,7 @@ class LexicalFeatures(URL):
     @cached_property
     def lx_has_www(self) -> bool:
         """Check if URL has a www. prefix."""
-        return "www." in self.cp_host
+        return "www." in self.lx_url_string
     
     @computed_field
     @cached_property

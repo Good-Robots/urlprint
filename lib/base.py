@@ -1,4 +1,5 @@
 from enum import Enum
+from requests import head
 from urllib.parse import urlparse
 from typing import Optional
 from pydantic import BaseModel, computed_field
@@ -19,6 +20,18 @@ class GenericURL(BaseModel):
 
 
 class URL(GenericURL):
+
+    @cached_property
+    def resolved(self):
+        _url, _parsed = self.url, urlparse(self.url)
+        if not bool(_parsed.scheme):
+            _url = f"http://{_url}"
+
+        try:
+            req = head(_url, allow_redirects=True, timeout=1)
+            return req.url
+        except:
+            return _url
 
     @cached_property
     def resolved_url(self):
