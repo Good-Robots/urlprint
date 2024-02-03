@@ -62,7 +62,7 @@ class LexicalFeatures(URL):
     @cached_property
     def lx_has_tls(self) -> bool:
         """Check if URL uses HTTPS."""
-        return self.cp_scheme == "https"
+        return self.url.startswith("https")
     
     @computed_field
     @cached_property
