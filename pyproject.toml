@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "urlprint"
+version = "0.1.0"
+description = "Fast and Efficient URL Detection"
+authors = ["eneyi <ruth.ikwu@outlook.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.6.0"
+shodan = "^1.31.0"
+streamlit = "^1.30.0"
+email-validator = "^2.1.0.post1"
+pyquery = "^2.0.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
