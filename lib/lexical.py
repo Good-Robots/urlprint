@@ -1,16 +1,15 @@
 from math import log
-from requests import head
-from string import punctuation
+from pydantic import computed_field
 
-from base import URL, computed_field, cached_property
+from lib.base import (
+    FeatureSet, cached_property, 
+    vowels, consonants, punctuations
+)
 
-class LexicalFeatures(URL):
-    def __init__(self, url:str, label:str) -> None:
-        super().__init__(url=url, label=label)
-
-    vowels: str = "aeiou"
-    consonants: str = "bcdfghjklmnpqrstvwxyz"
-    punctuations: str = punctuation
+class LexicalFeatures(FeatureSet):
+    vowels:str = vowels + vowels.upper()
+    consonants: str = consonants + consonants.upper()
+    punctuations: str = punctuations
 
     @computed_field
     @cached_property
@@ -42,6 +41,12 @@ class LexicalFeatures(URL):
     
     @computed_field
     @cached_property
+    def lx_num_paths(self) -> int:
+        """Number of Paths in the URL."""
+        return self.cp_path.count("/")
+    
+    @computed_field
+    @cached_property
     def lx_has_tls(self) -> bool:
         """Check if URL uses HTTPS."""
         return self.lx_url_string.startswith("https")
@@ -50,13 +55,7 @@ class LexicalFeatures(URL):
     @cached_property
     def lx_tld(self) -> str:
         """Top Level Domain of the URL."""
-        return self.cp_host.split(".")[-1]
-    
-    @computed_field
-    @cached_property
-    def lx_number_tld(self) -> int:
-        """Number of Subdomains in the URL."""
-        return self.cp_host.count(".")
+        return self.cp_domains[-1]
     
     @computed_field
     @cached_property
@@ -66,54 +65,71 @@ class LexicalFeatures(URL):
     
     @computed_field
     @cached_property
-    def lx_number_of_hyphens(self) -> int:
+    def lx_num_subdomains(self) -> int:
+        """Number of Subdomains in the URL."""
+        if len(self.cp_domains) == 0:
+            return 0
+        return len(self.cp_domains)-1
+    
+    @computed_field
+    @cached_property
+    def has_subdomains(self) -> bool:
+        """Check if URL has Subdomains."""
+        return self.lx_num_subdomains > 0
+    
+    @computed_field
+    @cached_property
+    def lx_num_hyphens(self) -> int:
         """Number of Hyphens in the URL."""
         return self.lx_url_string.count("-")
 
     @computed_field
     @cached_property
-    def lx_number_of_parameters(self) -> int:
+    def lx_num_query_params(self) -> int:
         """Number of Parameters in the URL."""
         return len(self.cp_query_params)
     
     @computed_field
     @cached_property
-    def avg_len_query_params(self) -> float:
+    def lx_avg_len_query_params(self) -> float:
         """Average Length of the Query Parameters."""
         if len(self.cp_query_params) == 0:
             return 0
         
-        if len(self.cp_query_params) == 1:
-            return len(self.cp_query_params[0][1])
-        
-        total = sum([
-            len(param[1]) for param in self.cp_query_params
-        ])
-        return total / len(self.cp_query_params)
+        try:
+            total = sum([
+                len(param[1]) for param in self.cp_query_params
+            ])
+            return total / len(self.cp_query_params)
+        except:
+            return 0
 
 
     @computed_field
     @cached_property
-    def number_of_int_query_params(self) -> int:
+    def lx_num_int_query_params(self) -> int:
         """Number of Integer Query Parameters."""
         if len(self.cp_query_params) == 0:
             return 0
         
-        total = sum([
-            all(c.replace('.','').isdigit() for c in param[1]) 
-                for param in self.cp_query_params
+        try:
+            total = sum([
+                all(c.isdigit() for c in param[1]) 
+                    for param in self.cp_query_params
             ])
-        return total
+            return total
+        except:
+            return 0
     
     @computed_field
     @cached_property
-    def lx_number_of_underscore(self) -> int:
+    def lx_num_underscore(self) -> int:
         """Number of Underscores in the URL."""
         return self.lx_url_string.count("_")
     
     @computed_field
     @cached_property
-    def lx_number_of_fragment(self) -> int:
+    def lx_num_fragment(self) -> int:
         """Number of Fragments in the URL."""
         return self.lx_url_string.count("#")
     
@@ -164,29 +180,35 @@ class LexicalFeatures(URL):
     def lx_num_consonants(self) -> int:
         """Number of Consonants in the URL String."""
         total = sum([
-            self.lx_url_string.count(c) for c in self.consonants
+            self.lx_url_string.split("://")[-1].count(c) for c in self.consonants
         ])
         return total
     
     @computed_field
     @cached_property
-    def lx_number_of_digits(self) -> int:
+    def lx_num_digits(self) -> int:
         """Number of Digits in the URL String."""
         total = sum(c.isdigit() for c in self.lx_url_string)
         return total
     
     @computed_field
     @cached_property
-    def lx_number_of_punctutations(self) -> int:
+    def lx_num_puncs(self) -> int:
         """Number of Punctuations in the URL String."""
         total = sum([self.lx_url_string.count(c) for c in self.punctuations])
         return total
     
     @computed_field
     @cached_property
-    def lx_number_subdirectories(self) -> int:
+    def lx_num_subdirectories(self) -> int:
         """Number of Subdirectories in the URL Path."""
         return self.cp_path.count("/")
+    
+    @computed_field
+    @cached_property
+    def lx_num_uppsecase(self) -> int:
+        """Number of Uppercase Characters in the URL String."""
+        return sum(c.isupper() for c in self.lx_url_string)
     
     @computed_field
     @cached_property
@@ -204,13 +226,13 @@ class LexicalFeatures(URL):
     @cached_property
     def lx_digit_density(self) -> float:
         """Total number of Digits divided by the URL Length."""
-        return self.lx_number_of_digits / self.lx_url_length
+        return self.lx_num_digits / self.lx_url_length
 
     @computed_field
     @cached_property
     def lx_punctuation_density(self) -> float:
         """Total number of Punctuations divided by the URL Length."""
-        return self.lx_number_of_punctutations / self.lx_url_length
+        return self.lx_num_puncs / self.lx_url_length
     
     @computed_field
     @cached_property

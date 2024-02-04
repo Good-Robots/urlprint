@@ -1,9 +1,14 @@
+from string import punctuation
 from enum import Enum
-from requests import head
+from requests import Response, get
 from urllib.parse import urlparse
 from typing import Optional
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel
 from functools import cached_property
+
+vowels: str = "aeiou"
+consonants: str = "bcdfghjklmnpqrstvwxyz"
+punctuations: str = punctuation
 
 
 class URLLabel(str, Enum):
@@ -14,78 +19,92 @@ class URLLabel(str, Enum):
     phishing = "phishing"
 
 
-class GenericURL(BaseModel):
+class URLItem(BaseModel):
     url: str
     label: Optional[URLLabel] = None
 
 
-class URL(GenericURL):
+class GenericURL(URLItem):
 
     @cached_property
-    def resolved(self):
+    def cp_req(self) -> Optional[Response]:
         _url, _parsed = self.url, urlparse(self.url)
-        if not bool(_parsed.scheme):
+        if not bool(_parsed.scheme) or _url.startswith("www"):
             _url = f"http://{_url}"
 
         try:
-            req = head(_url, allow_redirects=True, timeout=1)
-            return req.url
-        except:
-            return _url
+            headers = {'user-agent': 'Mozilla/5.0'}
+            return get(_url, allow_redirects=True, headers=headers, timeout=2.5)
+        except Exception as e:
+            return None
+        
+    @cached_property
+    def cp_headers(self) -> Optional[dict[str, str]]:
+        if self.cp_req:
+            return {k.lower():v for k,v in self.cp_req.headers.items()}
+        return {}
+
+    @cached_property
+    def resolved(self) -> str:
+        if self.cp_req:
+            return self.cp_req.url
+        return self.url
 
     @cached_property
     def resolved_url(self):
-        return urlparse(self.url)
+        return urlparse(self.resolved)
 
-    @computed_field
     @cached_property
     def cp_scheme(self) -> str:
         return self.resolved_url.scheme
     
-    @computed_field
     @cached_property
     def cp_host(self) -> str:
         if not self.resolved_url.netloc:
             return self.url.split("//")[-1].split("/")[0]
         return self.resolved_url.netloc
     
-    @computed_field
+    @cached_property
+    def cp_domains(self) -> list[str]:
+        domains = self.url.split("//")[-1].split("/")[0].split(".")
+        domains = [d for d in domains if not d.startswith("www")]
+        return domains
+    
     @cached_property
     def cp_path(self) -> str:
         if not self.resolved_url.path:
             return self.url.split("//")[-1].split("/", 1)[-1]
         return self.resolved_url.path
     
-    @computed_field
     @cached_property
     def cp_query(self) -> Optional[str]:
         return self.resolved_url.query
-    
-    @computed_field
+
     @cached_property
     def cp_query_params(self) -> list[Optional[tuple[str, str]]]:
         params = [
             tuple(qp.split("=")) for qp in 
-                self.resolved_url.query.split("&") if qp != ""
+                self.cp_query.split("&") if qp != ""
         ]
         return params
     
-    @computed_field
     @cached_property
-    def cp_fragment(self) -> Optional[str]:
+    def cp_fragment(self) -> str:
         return self.resolved_url.fragment
     
-    @computed_field
     @cached_property
-    def cp_port(self) -> Optional[str]:
+    def cp_port(self) -> str:
         return self.resolved_url.port
     
-    @computed_field
     @cached_property
     def cp_username(self) -> Optional[str]:
         return self.resolved_url.username
     
-    @computed_field
     @cached_property
     def cp_password(self) -> Optional[str]:
         return self.resolved_url.password
+    
+
+class FeatureSet(GenericURL):
+    def __init__(self, url:str, label:Optional[URLLabel]=None) -> None:
+        super().__init__(url=url, label=label)
