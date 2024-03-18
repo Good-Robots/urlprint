@@ -1,34 +1,18 @@
 [tool.poetry]
 name = "urlprint"
 version = "0.1.0"
-description = "Fast and Efficient URL Detection"
+description = ""
 authors = ["eneyi <ruth.ikwu@outlook.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-pydantic = "^2.6.0"
-shodan = "^1.31.0"
-streamlit = "^1.30.0"
-email-validator = "^2.1.0.post1"
-pyquery = "^2.0.0"
-seaborn = "^0.13.2"
-shap = "^0.44.1"
-xgboost = "^2.0.3"
-waybackpy = "^3.0.6"
-wayback = "^0.4.5"
-python-nmap = "^0.7.1"
-pydantic-settings = "^2.1.0"
-boto3 = "^1.34.40"
-google-cloud = "^0.34.0"
-google-cloud-storage = "^2.14.0"
-google-cloud-firestore = "^2.14.0"
-pymongo = "^4.6.1"
-metaflow = "^2.11.2"
+pymongo = "^4.6"
+pydantic = "^2.6.3"
+pydantic-settings = "^2.2.1"
+numpy = "^1.26.4"
+statsmodels = "^0.14.1"
 
-
-[tool.poetry.group.dev.dependencies]
-ipykernel = "^6.29.0"
 
 [build-system]
 requires = ["poetry-core"]

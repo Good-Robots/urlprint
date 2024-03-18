@@ -2,8 +2,5 @@ analysis.ipynb
 lexical_features.csv
 lib/content.py
 .venv/
-data/*
 *__pycache__/
-.env
 database/
-infra/

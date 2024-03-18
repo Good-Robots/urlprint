@@ -1,8 +1,8 @@
 from asyncio import run
-from utils.loader import DataLoader
+from lib.data.extract import FeatureExtractor
 
 async def main():
-    loader = DataLoader()
+    loader = FeatureExtractor()
     await loader.save()
 
 if __name__ == "__main__":
